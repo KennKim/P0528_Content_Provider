@@ -8,8 +8,6 @@ import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -45,10 +43,11 @@ public class AlbumActivity extends AppCompatActivity {
         b.setActivity(this);
 
         b.progress.setVisibility(View.VISIBLE);
-        getThumbAll();
-//        fetchAllImages();
+//        getThumbAll();
+        fetchAllImages();
 
-        mAdapter = new AlbumAdapter(
+
+        mAdapter = new AlbumAdapter(this, itemsAll,
                 new AlbumAdapter.OnSelectListener() {
                     @Override
                     public void onSelected(Photo photo) {
@@ -66,12 +65,10 @@ public class AlbumActivity extends AppCompatActivity {
                 });
         b.rv.setAdapter(mAdapter);
 
-        ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(AlbumActivity.this, android.R.layout.simple_spinner_item, listFolder);
+        /*ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(AlbumActivity.this, android.R.layout.simple_spinner_item, listFolder);
         spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         b.spin.setAdapter(spinAdapter);
-
-
         b.spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
@@ -86,7 +83,10 @@ public class AlbumActivity extends AppCompatActivity {
 
             }
         });
+*/
 
+
+        mAdapter.notifyDataSetChanged();
 //        b.iv.setImageURI(itemsAll.get(10).thumb);
         b.progress.setVisibility(View.INVISIBLE);
 
@@ -128,8 +128,29 @@ public class AlbumActivity extends AppCompatActivity {
             if (cursor.moveToFirst()) {
                 do {
                     String filePath = cursor.getString(dataColumnIndex);
+                    String id = cursor.getString(dataId);
+
+                    String thumbId = cursor.getString(dataThumbId);
                     Uri imageUri = Uri.parse(filePath);
-                    items.add(imageUri);
+//                    Uri thumbUri = getTtestThumbUri(id);
+//                    Uri thumbUri = getThumbUri(thumbId);
+
+
+                    String added = cursor.getString(dataDateAdded);
+                    String taken = cursor.getString(dataDateTaken);
+
+
+                    Photo photo = new Photo(imageUri, null, filePath, id, added, taken);
+                    itemsAll.add(photo);
+
+//                    addListFolder(photo);
+
+
+                    /*
+
+                    String filePath = cursor.getString(dataColumnIndex);
+                    Uri imageUri = Uri.parse(filePath);
+                    items.add(imageUri);*/
 
                 } while (cursor.moveToNext());
 
@@ -152,6 +173,30 @@ public class AlbumActivity extends AppCompatActivity {
         if (folder == null) {
             return;
         }
+
+        if (listFolder.contains(folder)) {    // folder가 있을때 case1. photo를 추가해야 함.
+
+            listTemp.add(photo);
+
+        } else {                              // folder가 없을때 case1.처음 case2.다음 folder
+
+//            currentFolder = folder;
+            listFolder.add(folder);
+
+
+            if (!listTemp.isEmpty()) {
+                int size = listTemp.size();
+                String modifiedFolderName = folder + " (" + size + ")";
+                listPhotoFolder.add(new PhotoFolder(modifiedFolderName, listTemp));
+
+                listTemp.clear();
+                listTemp.add(photo);
+            }
+            listTemp.add(photo);
+
+
+        }
+        /*
         if (listFolder.contains(folder)) {    // folder가 있을때 case1. photo를 추가해야 함.
 
             listTemp.add(photo);
@@ -172,7 +217,7 @@ public class AlbumActivity extends AppCompatActivity {
             listTemp.add(photo);
 
 
-        }
+        }*/
     }
 
     private void modifyFolderName() {
@@ -206,6 +251,8 @@ public class AlbumActivity extends AppCompatActivity {
                 new String[]{imageId},
                 null);
 
+        //todo: 이미지 id만 던져주고 id로 thumbnail 받아와서 뿌리는 걸로?
+
 
         if (cursor != null && cursor.moveToFirst()) {
 
@@ -213,13 +260,7 @@ public class AlbumActivity extends AppCompatActivity {
             String thumbnailPath = cursor.getString(thumbnailColumnIndex);
             cursor.close();
             return Uri.parse(thumbnailPath);
-        }
-        return null;
-
-
-        //todo: 이미지 id만 던져주고 id로 thumbnail 받아와서 뿌리는 걸로?
-
-       /* else {
+        } else {
             // thumbnailCursor가 비었습니다.
             // 이는 이미지 파일이 있더라도 썸네일이 존재하지 않을 수 있기 때문입니다.
             // 보통 이미지가 생성된 지 얼마 되지 않았을 때 그렇습니다.
@@ -230,19 +271,35 @@ public class AlbumActivity extends AppCompatActivity {
                     null);
             cursor.close();
             return getThumbUri(imageId);
-
+/*
 
 Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(getContentResolver(),
 	 selectedImageUri,
 	MediaStore.Images.Thumbnails.MINI_KIND,
 	 null );
+*/
 
+        }
+    }
 
+    private Uri getTtestThumbUri(String id) {
+        Uri thumbUri = null;
 
+        String[] projection = {MediaStore.Images.Thumbnails.DATA};
 
+        Cursor cursor = MediaStore.Images.Thumbnails.queryMiniThumbnail(
+                getContentResolver(),
+                Long.parseLong(id),
+                MediaStore.Images.Thumbnails.MINI_KIND,
+                null);
+        if (cursor != null && cursor.moveToFirst()) {
 
+            int thumbnailColumnIndex = cursor.getColumnIndex(projection[0]);
+            String thumbnailPath = cursor.getString(thumbnailColumnIndex);
+            thumbUri = Uri.parse(thumbnailPath);
+        }
 
-        }*/
+        return thumbUri;
     }
 
 
