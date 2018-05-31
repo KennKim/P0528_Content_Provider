@@ -43,7 +43,7 @@
             android:background="#afafff"
             app:layoutManager="android.support.v7.widget.GridLayoutManager"
             app:layout_constraintTop_toTopOf="parent"
-            app:spanCount="4"
+            app:spanCount="3"
             tools:listitem="@layout/viewholder_album" />
 
         <Button

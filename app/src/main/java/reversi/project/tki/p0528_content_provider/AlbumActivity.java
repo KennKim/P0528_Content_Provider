@@ -3,7 +3,6 @@ package reversi.project.tki.p0528_content_provider;
 import android.database.Cursor;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
@@ -11,6 +10,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 
@@ -22,9 +22,10 @@ public class AlbumActivity extends AppCompatActivity {
 
     private AlbumAdapter mAdapter;
     private ArrayList<Photo> itemsAll = new ArrayList<>();
-    public static ArrayList<Photo> items = new ArrayList<>();
+    //    public static ArrayList<Photo> items = new ArrayList<>();
+    public static ArrayList<Uri> items = new ArrayList<>();
 
-//    private ArrayAdapter<String> spinAdapter;
+    //    private ArrayAdapter<String> spinAdapter;
     private ArrayList<String> listFolder = new ArrayList<>();
 
     public static String folder;
@@ -44,14 +45,38 @@ public class AlbumActivity extends AppCompatActivity {
         b.setActivity(this);
 
         b.progress.setVisibility(View.VISIBLE);
+        getThumbAll();
+//        fetchAllImages();
+
+        mAdapter = new AlbumAdapter(
+                new AlbumAdapter.OnSelectListener() {
+                    @Override
+                    public void onSelected(Photo photo) {
+
+                    }
+
+                    @Override
+                    public void onSelectedArray(ArrayList<Photo> arrayUrl) {
+                           /* Intent intent = new Intent();
+                            intent.putParcelableArrayListExtra(MainActivity.PUT_STRING_URI, listUrl);
+                            setResult(RESULT_OK, intent);
+
+                            finish();*/
+                    }
+                });
+        b.rv.setAdapter(mAdapter);
+
+        ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(AlbumActivity.this, android.R.layout.simple_spinner_item, listFolder);
+        spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+
+        b.spin.setAdapter(spinAdapter);
+
 
         b.spin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 
                 Log.d("tttest", "onItemSelected");
-//                folder = listFolder.get(position);
-                items = listPhotoFolder.get(position).items;
                 mAdapter.notifyDataSetChanged();
             }
 
@@ -62,18 +87,15 @@ public class AlbumActivity extends AppCompatActivity {
             }
         });
 
-
-        MyAsync myAsync = new MyAsync();
-        myAsync.execute(100);
-
-
+//        b.iv.setImageURI(itemsAll.get(10).thumb);
+        b.progress.setVisibility(View.INVISIBLE);
 
     }
 
     private void fetchAllImages() {
 
 
-  // DATA는 이미지 파일의 스트림 데이터 경로를 나타냅니다.
+        // DATA는 이미지 파일의 스트림 데이터 경로를 나타냅니다.
         String[] projection = {MediaStore.Images.Media.DATA,
                 MediaStore.Images.Media._ID,
                 MediaStore.Images.Media.DATE_ADDED,
@@ -106,21 +128,8 @@ public class AlbumActivity extends AppCompatActivity {
             if (cursor.moveToFirst()) {
                 do {
                     String filePath = cursor.getString(dataColumnIndex);
-                    String id = cursor.getString(dataId);
-                    String thumbId = cursor.getString(dataThumbId);
                     Uri imageUri = Uri.parse(filePath);
-                    Uri thumbUri = getThumbUri(thumbId);
-
-
-                    String added = cursor.getString(dataDateAdded);
-                    String taken = cursor.getString(dataDateTaken);
-
-
-                    Photo photo = new Photo(imageUri, thumbUri, filePath, added, taken);
-                    itemsAll.add(photo);
-
-                    addListFolder(photo);
-
+                    items.add(imageUri);
 
                 } while (cursor.moveToNext());
 
@@ -131,7 +140,7 @@ public class AlbumActivity extends AppCompatActivity {
         cursor.close();
     }
 
-//    private String currentFolder = null;
+    //    private String currentFolder = null;
     private ArrayList<Photo> listTemp = new ArrayList<>();
 
     private void addListFolder(Photo photo) {
@@ -145,7 +154,7 @@ public class AlbumActivity extends AppCompatActivity {
         }
         if (listFolder.contains(folder)) {    // folder가 있을때 case1. photo를 추가해야 함.
 
-                listTemp.add(photo);
+            listTemp.add(photo);
 
         } else {                              // folder가 없을때 case1.처음 case2.다음 folder
 
@@ -154,7 +163,7 @@ public class AlbumActivity extends AppCompatActivity {
 
             if (!listTemp.isEmpty()) {
                 int size = listTemp.size();
-                String modifiedFolderName =  folder + " (" + size + ")";
+                String modifiedFolderName = folder + " (" + size + ")";
                 listPhotoFolder.add(new PhotoFolder(modifiedFolderName, listTemp));
 
                 listTemp.clear();
@@ -165,9 +174,10 @@ public class AlbumActivity extends AppCompatActivity {
 
         }
     }
-    private void modifyFolderName(){
-            listFolder.clear();
-        for (PhotoFolder pf: listPhotoFolder) {
+
+    private void modifyFolderName() {
+        listFolder.clear();
+        for (PhotoFolder pf : listPhotoFolder) {
             listFolder.add(pf.folder);
         }
 
@@ -206,6 +216,9 @@ public class AlbumActivity extends AppCompatActivity {
         }
         return null;
 
+
+        //todo: 이미지 id만 던져주고 id로 thumbnail 받아와서 뿌리는 걸로?
+
        /* else {
             // thumbnailCursor가 비었습니다.
             // 이는 이미지 파일이 있더라도 썸네일이 존재하지 않을 수 있기 때문입니다.
@@ -217,97 +230,56 @@ public class AlbumActivity extends AppCompatActivity {
                     null);
             cursor.close();
             return getThumbUri(imageId);
+
+
+Bitmap bitmap = MediaStore.Images.Thumbnails.getThumbnail(getContentResolver(),
+	 selectedImageUri,
+	MediaStore.Images.Thumbnails.MINI_KIND,
+	 null );
+
+
+
+
+
+
         }*/
     }
 
-    private void setArrayFolder() {
-/*
-        for (Photo photo : itemsAll) {
-            String[] a = photo.photoUrl.split("/");
-            String folder = a[a.length - 2];
 
-            if (listFolder.contains(folder)) {
+    private void getThumbAll() {
+        // DATA는 이미지 파일의 스트림 데이터 경로를 나타냅니다.
+        String[] projection = {MediaStore.Images.Thumbnails.DATA};
+
+        // 원본 이미지의 _ID가 매개변수 imageId인 썸네일을 출력
+        Cursor cursor = getContentResolver().query(
+                MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, // 썸네일 컨텐트 테이블
+                projection, // DATA를 출력
+                null, // IMAGE_ID는 원본 이미지의 _ID를 나타냅니다.
+                null,
+                null);
 
 
-            } else {
-                listFolder.add(folder);
-                ArrayList<Photo> list = new ArrayList<>();
-                list.add(photo);
+        if (cursor == null) {
 
+            Toast.makeText(AlbumActivity.this, "null", Toast.LENGTH_SHORT).show();
+
+        } else {
+
+            int thumbnailColumnIndex = cursor.getColumnIndex(projection[0]);
+
+            if (cursor.moveToFirst()) {
+                do {
+                    String thumbnailPath = cursor.getString(thumbnailColumnIndex);
+                    Uri thumbnailUri = Uri.parse(thumbnailPath);
+
+                    items.add(thumbnailUri);
+
+                } while (cursor.moveToNext());
 
             }
-        }*/
-
-/*
-        for (String folder : listFolder) {
-            ArrayList<Photo> list = new ArrayList<>();
-
-            for (Photo photo : itemsAll) {
-                if (folder != null && folder.equals(photo.folder)) {
-                    list.add(photo);
-                }
-            }
-            listPhotoFolder.add(new PhotoFolder(folder, list));
-        }*/
+        }
+        cursor.close();
 
     }
 
-    public class MyAsync extends AsyncTask<Integer, Integer, Integer> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected void onPostExecute(Integer integer) {
-
-            items = listPhotoFolder.get(folderIndex).items;
-
-            mAdapter = new AlbumAdapter(
-                    new AlbumAdapter.OnSelectListener() {
-                        @Override
-                        public void onSelected(Photo photo) {
-
-                        }
-
-                        @Override
-                        public void onSelectedArray(ArrayList<Photo> arrayUrl) {
-                           /* Intent intent = new Intent();
-                            intent.putParcelableArrayListExtra(MainActivity.PUT_STRING_URI, listUrl);
-                            setResult(RESULT_OK, intent);
-
-                            finish();*/
-                        }
-                    });
-            b.rv.setAdapter(mAdapter);
-
-            ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(AlbumActivity.this, android.R.layout.simple_spinner_item, listFolder);
-            spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-
-            b.spin.setAdapter(spinAdapter);
-
-
-            b.iv.setImageURI(itemsAll.get(10).thumb);
-
-
-            b.progress.setVisibility(View.INVISIBLE);
-            super.onPostExecute(integer);
-
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-        }
-
-        @Override
-        protected Integer doInBackground(Integer... integers) {
-
-            fetchAllImages();
-            modifyFolderName();
-//            setArrayFolder();
-            return null;
-        }
-    }
 }
