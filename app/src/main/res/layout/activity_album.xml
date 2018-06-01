@@ -38,9 +38,12 @@
         <android.support.v7.widget.RecyclerView
             android:id="@+id/rv"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginTop="100dp"
             android:background="#afafff"
+            android:clipToPadding="false"
+            android:paddingBottom="100dp"
+            android:scrollbars="vertical"
             app:layoutManager="android.support.v7.widget.GridLayoutManager"
             app:layout_constraintTop_toTopOf="parent"
             app:spanCount="3"

@@ -17,7 +17,7 @@ public class ImageActivity extends AppCompatActivity {
 
     private ActivityImageBinding b;
     public static final String PUT_IMG_PATH = "put_img_path";
-    private boolean on=true;
+    private boolean on;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,7 +44,7 @@ public class ImageActivity extends AppCompatActivity {
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus) {
-            hideSystemUI();
+            showSystemUI();
         }
     }
 
@@ -81,8 +81,10 @@ public class ImageActivity extends AppCompatActivity {
     public void onClickImage(View view) {
         if (on) {
             showSystemUI();
+            on=false;
         } else {
             hideSystemUI();
+            on=true;
         }
     }
 

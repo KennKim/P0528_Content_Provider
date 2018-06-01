@@ -19,7 +19,7 @@ public class Photo  {
     public String folder;
 
 
-    public Photo(Uri uri, String photoPath, String photoId,  String dateTaken,  String size,  String orientation) {
+    public Photo(Uri uri, String photoPath, String photoId,  String dateTaken,  String size,  String orientation,  String folder) {
         this.uri = uri;
         this.thumbUri = null;
         this.photoPath = photoPath;
@@ -27,6 +27,7 @@ public class Photo  {
         this.dateTaken = dateTaken;
         this.size = size;
         this.orientation = orientation;
+        this.folder = folder;
     }
 
 

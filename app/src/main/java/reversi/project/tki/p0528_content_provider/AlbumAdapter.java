@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.databinding.BindingAdapter;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -15,6 +16,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 import reversi.project.tki.p0528_content_provider.databinding.ViewholderAlbumBinding;
@@ -33,12 +35,13 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewholderAl
     }
 
     private Context mContext;
-    private ArrayList<Photo> items;
+    //    private ArrayList<Photo> items;
     private OnSelectListener mListener;
 
-    AlbumAdapter(Context mContext, ArrayList<Photo> items, OnSelectListener mListener) {
+
+    public AlbumAdapter(Context mContext, OnSelectListener mListener) {
         this.mContext = mContext;
-        this.items = items;
+//        this.items = items;
         this.mListener = mListener;
     }
 
@@ -54,11 +57,11 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewholderAl
 //        Uri uri = AlbumActivity.items.get(p);
 //        h.b.setImageUri(uri);
 
-        final Photo photo = items.get(p);
-        if (photo.thumbUri == null) {
-            photo.thumbUri = getThumbUri(photo.photoId);
-        }
+        Photo photo = AlbumActivity.items.get(p);
 
+
+        h.bind(photo);
+/*
         h.b.setPhoto(photo);
         h.b.cardview.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -71,13 +74,13 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewholderAl
 //                mListener.onSelected(photo);
 
             }
-        });
+        });*/
 
     }
 
     @Override
     public int getItemCount() {
-        return items.size();
+        return AlbumActivity.items.size();
     }
 
     @BindingAdapter({"android:src"})
@@ -96,61 +99,98 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewholderAl
         });*/
     }
 
-    private Uri getThumbUri(String imageId) {
-        String[] projection = {MediaStore.Images.Thumbnails.DATA};
 
-        Cursor cursor = mContext.getContentResolver().query(
-                MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, // 썸네일 컨텐트 테이블
-                projection, // DATA를 출력
-                MediaStore.Images.Thumbnails.IMAGE_ID + "=?", // IMAGE_ID는 원본 이미지의 _ID를 나타냅니다.
-                new String[]{imageId},
-                null);
-
-
-        if (cursor != null && cursor.moveToFirst()) {
-            int thumbnailColumnIndex = cursor.getColumnIndex(projection[0]);
-            String thumbnailPath = cursor.getString(thumbnailColumnIndex);
-            cursor.close();
-            return Uri.parse(thumbnailPath);
-        } else {
-            // thumbnailCursor가 비었습니다.
-            // 썸네일이 존재하지 않을 때에는 아래와 같이 썸네일을 생성하도록 요청합니다
-            MediaStore.Images.Thumbnails.getThumbnail(mContext.getContentResolver(),
-                    Long.parseLong(imageId),
-                    MediaStore.Images.Thumbnails.MINI_KIND,
-                    null);
-            cursor.close();
-            return getThumbUri(imageId);
-        }
-    }
-
-
-    private Uri getTtestThumbUri(String id) {
-        Uri thumbUri = null;
-
-        String[] projection = {MediaStore.Images.Thumbnails.DATA};
-
-        Cursor cursor = MediaStore.Images.Thumbnails.queryMiniThumbnail(
-                mContext.getContentResolver(),
-                Long.parseLong(id),
-                MediaStore.Images.Thumbnails.MINI_KIND,
-                null);
-        if (cursor != null && cursor.moveToFirst()) {
-
-            int thumbnailColumnIndex = cursor.getColumnIndex(projection[0]);
-            String thumbnailPath = cursor.getString(thumbnailColumnIndex);
-            thumbUri = Uri.parse(thumbnailPath);
-        }
-
-        return thumbUri;
-    }
-
-    class ViewholderAlbum extends RecyclerView.ViewHolder {
+    public class ViewholderAlbum extends RecyclerView.ViewHolder {
         private ViewholderAlbumBinding b;
+        private Photo photo;
 
         public ViewholderAlbum(View itemView) {
             super(itemView);
             b = DataBindingUtil.bind(itemView);
+            b.setHolder(this);
+        }
+
+        private void bind(Photo photo) {
+            this.photo = photo;
+            if (photo.thumbUri == null) {
+//                photo.thumbUri = getThumbUri(photo.photoId);
+                new MyAsync((AlbumActivity) mContext, b).execute(photo);
+                return;
+            }
+            b.setPhoto(photo);
+        }
+
+        public void onClickIv(View view) {
+            Intent intent = new Intent(mContext, ImageActivity.class);
+            intent.putExtra(ImageActivity.PUT_IMG_PATH, photo.photoPath);
+            mContext.startActivity(intent);
+        }
+
+
+    }
+
+    public static class MyAsync extends AsyncTask<Photo, Integer, Uri> {
+
+        private WeakReference<AlbumActivity> mActivity;
+        private Photo photo;
+        private ViewholderAlbumBinding b;
+
+        private MyAsync(AlbumActivity activity, ViewholderAlbumBinding b) {
+            mActivity = new WeakReference<>(activity);
+            this.b = b;
+        }
+
+
+        @Override
+        protected Uri doInBackground(Photo... photos) {
+            this.photo = photos[0];
+            return getThumbUri(photo.photoId, 1);
+        }
+
+        @Override
+        protected void onPostExecute(Uri uri) {
+            if (AlbumActivity.currentFolder.equals(photo.folder)) {
+                photo.thumbUri = uri;
+                b.setPhoto(photo);
+            }else{
+                cancel(true);
+            }
+            super.onPostExecute(uri);
+        }
+
+
+        private Uri getThumbUri(String imageId, int count) {
+            String[] projection = {MediaStore.Images.Thumbnails.DATA};
+
+            Cursor cursor = mActivity.get().getContentResolver().query(
+                    MediaStore.Images.Thumbnails.EXTERNAL_CONTENT_URI, // 썸네일 컨텐트 테이블
+                    projection, // DATA를 출력
+                    MediaStore.Images.Thumbnails.IMAGE_ID + "=?", // IMAGE_ID는 원본 이미지의 _ID를 나타냅니다.
+                    new String[]{imageId},
+                    null);
+
+
+            if (cursor != null && cursor.moveToFirst()) {
+                int thumbnailColumnIndex = cursor.getColumnIndex(projection[0]);
+                String thumbnailPath = cursor.getString(thumbnailColumnIndex);
+                cursor.close();
+                return Uri.parse(thumbnailPath);
+            } else {
+                // thumbnailCursor가 비었습니다.
+                // 썸네일이 존재하지 않을 때에는 아래와 같이 썸네일을 생성하도록 요청합니다
+                if (count > 2) {
+                    return null; // 요청은 두번만 하고 그래도 썸네일 안 만들어지면 그냥 null
+                }
+                count++;
+
+                MediaStore.Images.Thumbnails.getThumbnail(mActivity.get().getContentResolver(),
+                        Long.parseLong(imageId),
+                        MediaStore.Images.Thumbnails.MINI_KIND,
+                        null);
+                cursor.close();
+                return getThumbUri(imageId, count);
+            }
         }
     }
+
 }

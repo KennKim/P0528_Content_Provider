@@ -12,7 +12,6 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 
 import reversi.project.tki.p0528_content_provider.databinding.ActivityAlbumBinding;
 import reversi.project.tki.p0528_content_provider.util.MyTime;
@@ -22,11 +21,13 @@ public class AlbumActivity extends AppCompatActivity {
     private ActivityAlbumBinding b;
 
     private AlbumAdapter mAdapter;
-    private ArrayList<Photo> itemsAll = new ArrayList<>();
-    private ArrayList<Photo> items = new ArrayList<>();
-    private LinkedHashMap<String, ArrayList<Photo>> mapFolder = new LinkedHashMap<>();
+    public static ArrayList<Photo> items;
+    public static String currentFolder;
+
     private ArrayList<String> listFolder = new ArrayList<>();
-    private int spinIndex = 0;
+    private ArrayList<String> listFolderName = new ArrayList<>();
+    private ArrayList<ArrayList<Photo>> listOflist = new ArrayList<>();
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,19 +36,18 @@ public class AlbumActivity extends AppCompatActivity {
         b.setActivity(this);
 
         b.progress.setVisibility(View.VISIBLE);
+        items = new ArrayList<>();
         fetchAllImages();
         modifyFolderName();
 
         initView();
 
-        b.spin.setSelection(spinIndex);
-//        mAdapter.notifyDataSetChanged();
+        b.spin.setSelection(0);
         b.progress.setVisibility(View.INVISIBLE);
-
     }
 
     private void initView() {
-        mAdapter = new AlbumAdapter(this, items,
+        mAdapter = new AlbumAdapter(this,
                 new AlbumAdapter.OnSelectListener() {
                     @Override
                     public void onSelected(Photo photo) {
@@ -65,7 +65,7 @@ public class AlbumActivity extends AppCompatActivity {
                 });
         b.rv.setAdapter(mAdapter);
 
-        ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(AlbumActivity.this, android.R.layout.simple_spinner_item, listFolder);
+        ArrayAdapter<String> spinAdapter = new ArrayAdapter<>(AlbumActivity.this, android.R.layout.simple_spinner_item, listFolderName);
         spinAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 
         b.spin.setAdapter(spinAdapter);
@@ -73,15 +73,15 @@ public class AlbumActivity extends AppCompatActivity {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
 
-                Log.d("tttest", "onItemSelected");
-//                mAdapter.notifyDataSetChanged();
-//                items = mapFolder.values().toArray()[position];
+                currentFolder = listFolder.get(position);
+
+                items = listOflist.get(position);
+                mAdapter.notifyDataSetChanged();
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
                 Log.d("tttest", "onNothingSelected");
-
             }
         });
     }
@@ -110,7 +110,6 @@ public class AlbumActivity extends AppCompatActivity {
             Log.d("tttest", "cursor null");
             return;
         } else {
-            itemsAll = new ArrayList<>(cursor.getCount());
             int dataColumnIndex = cursor.getColumnIndex(projection[0]);
             int dataId = cursor.getColumnIndex(projection[1]);
             int dataDateTaken = cursor.getColumnIndex(projection[2]);
@@ -126,15 +125,15 @@ public class AlbumActivity extends AppCompatActivity {
                     String orientation = cursor.getString(dataorientation);
                     Uri imageUri = Uri.parse(filePath);
 
-                    //todo: photo pojo 정리하고, folder 별로 spinner 해결할 것. 그리고 GLIDE uri로 load 하는거 찾아볼 것. 꼭 file로만 해야 하는건지?
 
                     String taken = cursor.getString(dataDateTaken);
                     String takenDate = MyTime.getStringFormat(taken, MyTime.DATE_FORMAT);
 
+                    String[] a = filePath.split("/");  //folder별 정리.
+                    String folder = a[a.length - 2];
 
-                    Photo photo = new Photo(imageUri, filePath, id, taken, size, orientation);
-//                    itemsAll.add(photo);
 
+                    Photo photo = new Photo(imageUri, filePath, id, taken, size, orientation, folder);
                     addListFolder(photo);
 
                 } while (cursor.moveToNext());
@@ -146,35 +145,42 @@ public class AlbumActivity extends AppCompatActivity {
         cursor.close();
     }
 
-    private void addListFolder(Photo photo) {
-        String[] a = photo.photoPath.split("/");
-        String folder = a[a.length - 2];
 
-        if (folder == null) {
+
+    private void addListFolder(Photo photo) {
+
+        if (photo.folder == null) {
             return;
         }
 
-        if (listFolder.contains(folder)) {    // folder가 있을때 case1. photo를 추가해야 함.
-            ArrayList<Photo> list = mapFolder.get(folder);
-            list.add(photo);
-            mapFolder.put(folder, list);
+        if (listFolder.contains(photo.folder)) {    // folder가 있을때
 
-        } else {                              // folder가 없을때 case1.처음 case2.다음 folder
-            listFolder.add(folder);
+            int i = 0;
+            for (String f : listFolder) {
+                if (f.equals(photo.folder)) {
+                    listOflist.get(i).add(photo);
+                }
+                i++;
+            }
+
+        } else {                              // folder가 없을때
+            listFolder.add(photo.folder);
             ArrayList<Photo> list = new ArrayList<>();
             list.add(photo);
-            mapFolder.put(folder, list);
+            listOflist.add(list);
 
         }
 
     }
 
     private void modifyFolderName() {
-        listFolder.clear();
-        for (String f : mapFolder.keySet()) {
-            int size = mapFolder.get(f).size();
-            listFolder.add(f + " (" + size + ")");
-
+        // folder안의 image count를 spinner에 넣기위해.
+        int i = 0;
+        for (String f : listFolder) {
+            int size = listOflist.get(i).size();
+            f = f + " (" + size + ")";
+            listFolderName.add(f);
+            i++;
         }
     }
 
