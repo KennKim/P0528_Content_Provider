@@ -9,27 +9,24 @@ import android.net.Uri;
 public class Photo  {
 
     public Uri uri;
-    public Uri thumb;
-    public String photoUrl;
+    public Uri thumbUri;
+    public String photoPath;
     public String photoId;
-    public String folder;
-    public String dateAdded;
     public String dateTaken;
+    public String size;
+    public String orientation;
+
+    public String folder;
 
 
-    public Photo(Uri uri, String photoUrl) {
+    public Photo(Uri uri, String photoPath, String photoId,  String dateTaken,  String size,  String orientation) {
         this.uri = uri;
-        this.photoUrl = photoUrl;
-    }
-
-
-    public Photo(Uri uri, Uri thumb, String photoUrl, String photoId, String dateAdded, String dateTaken) {
-        this.uri = uri;
-        this.thumb = thumb;
-        this.photoUrl = photoUrl;
+        this.thumbUri = null;
+        this.photoPath = photoPath;
         this.photoId = photoId;
-        this.dateAdded = dateAdded;
         this.dateTaken = dateTaken;
+        this.size = size;
+        this.orientation = orientation;
     }
 
 

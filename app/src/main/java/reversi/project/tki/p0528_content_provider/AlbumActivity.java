@@ -13,6 +13,7 @@ import android.widget.Toast;
 import java.util.ArrayList;
 
 import reversi.project.tki.p0528_content_provider.databinding.ActivityAlbumBinding;
+import reversi.project.tki.p0528_content_provider.util.MyTime;
 
 public class AlbumActivity extends AppCompatActivity {
 
@@ -87,7 +88,7 @@ public class AlbumActivity extends AppCompatActivity {
 
 
         mAdapter.notifyDataSetChanged();
-//        b.iv.setImageURI(itemsAll.get(10).thumb);
+//        b.iv.setImageURI(itemsAll.get(10).thumbUri);
         b.progress.setVisibility(View.INVISIBLE);
 
     }
@@ -96,11 +97,12 @@ public class AlbumActivity extends AppCompatActivity {
 
 
         // DATA는 이미지 파일의 스트림 데이터 경로를 나타냅니다.
-        String[] projection = {MediaStore.Images.Media.DATA,
+        String[] projection = {
+                MediaStore.Images.Media.DATA,
                 MediaStore.Images.Media._ID,
-                MediaStore.Images.Media.DATE_ADDED,
                 MediaStore.Images.Media.DATE_TAKEN,
-                MediaStore.Images.Thumbnails._ID,
+                MediaStore.Images.Media.SIZE,
+                MediaStore.Images.Media.ORIENTATION,
         };
 
         Cursor cursor = getContentResolver().query(
@@ -120,28 +122,32 @@ public class AlbumActivity extends AppCompatActivity {
             itemsAll = new ArrayList<>(cursor.getCount());
             int dataColumnIndex = cursor.getColumnIndex(projection[0]);
             int dataId = cursor.getColumnIndex(projection[1]);
-            int dataDateAdded = cursor.getColumnIndex(projection[2]);
-            int dataDateTaken = cursor.getColumnIndex(projection[3]);
-            int dataThumbId = cursor.getColumnIndex(projection[4]);
+            int dataDateTaken = cursor.getColumnIndex(projection[2]);
+            int datasize = cursor.getColumnIndex(projection[3]);
+            int dataorientation = cursor.getColumnIndex(projection[4]);
 
 
             if (cursor.moveToFirst()) {
                 do {
                     String filePath = cursor.getString(dataColumnIndex);
                     String id = cursor.getString(dataId);
+                    String size = cursor.getString(datasize);
+                    String orientation = cursor.getString(dataorientation);
+//                    String contenttype = cursor.getString(dataContentType);
 
-                    String thumbId = cursor.getString(dataThumbId);
                     Uri imageUri = Uri.parse(filePath);
-//                    Uri thumbUri = getTtestThumbUri(id);
-//                    Uri thumbUri = getThumbUri(thumbId);
 
 
-                    String added = cursor.getString(dataDateAdded);
+                    //todo: photo pojo 정리하고, folder 별로 spinner 해결할 것. 그리고 GLIDE uri로 load 하는거 찾아볼 것. 꼭 file로만 해야 하는건지?
+
+
                     String taken = cursor.getString(dataDateTaken);
+                    String takenDate = MyTime.getStringFormat(taken, MyTime.DATE_FORMAT);
 
 
-                    Photo photo = new Photo(imageUri, null, filePath, id, added, taken);
+                    Photo photo = new Photo(imageUri, filePath, id, taken, size, orientation);
                     itemsAll.add(photo);
+
 
 //                    addListFolder(photo);
 
@@ -166,7 +172,7 @@ public class AlbumActivity extends AppCompatActivity {
 
     private void addListFolder(Photo photo) {
 
-        String[] a = photo.photoUrl.split("/");
+        String[] a = photo.photoPath.split("/");
         String folder = a[a.length - 2];
 
 
@@ -250,8 +256,6 @@ public class AlbumActivity extends AppCompatActivity {
                 MediaStore.Images.Thumbnails.IMAGE_ID + "=?", // IMAGE_ID는 원본 이미지의 _ID를 나타냅니다.
                 new String[]{imageId},
                 null);
-
-        //todo: 이미지 id만 던져주고 id로 thumbnail 받아와서 뿌리는 걸로?
 
 
         if (cursor != null && cursor.moveToFirst()) {

@@ -66,7 +66,7 @@ public class MyTime {
         DateFormat dateFormat = new SimpleDateFormat(str);
 
         long longTime = Long.parseLong(dbTime);
-        return dateFormat.format(longTime + LOCALE_GAP);
+        return dateFormat.format(longTime);
     }
 
     public static String getStringElapsedTime(String dbTime) {

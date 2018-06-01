@@ -55,8 +55,8 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewholderAl
 //        h.b.setImageUri(uri);
 
         final Photo photo = items.get(p);
-        if (photo.thumb == null) {
-            photo.thumb = getTtestThumbUri(photo.photoId);
+        if (photo.thumbUri == null) {
+            photo.thumbUri = getThumbUri(photo.photoId);
         }
 
         h.b.setPhoto(photo);
@@ -65,7 +65,7 @@ public class AlbumAdapter extends RecyclerView.Adapter<AlbumAdapter.ViewholderAl
             public void onClick(View v) {
 
                 Intent intent = new Intent(mContext, ImageActivity.class);
-                intent.putExtra(ImageActivity.PUT_IMG_PATH, photo.photoUrl);
+                intent.putExtra(ImageActivity.PUT_IMG_PATH, photo.photoPath);
                 mContext.startActivity(intent);
 
 //                mListener.onSelected(photo);
